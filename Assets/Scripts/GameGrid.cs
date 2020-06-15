@@ -11,20 +11,17 @@ public class GameGrid : MonoBehaviour
     private GridItem[,] _items;
     private GridItem _currentlySelectedItem;
     public static int minItemsForMatch = 3;
+    public float delayBetweenMatches = 0.2f;
+    public bool canPlay;
 
     // Start is called before the first frame update
     void Start()
     {
+        canPlay = true;
         GetCandies();
         FillGrid();
+        ClearGrid();
         GridItem.OnMouseOverItemEventHandler += OnMouseOverItem;
-        List<GridItem> matchesForItems = SearchVertically(_items[3,3]);
-        if (matchesForItems.Count >= 3)
-        {
-            Debug.Log("Há um match válido para o indice 3, 3");
-        } else {
-            Debug.Log("Não há um match válido para o indice 3, 3");
-        }
     }
 
     void OnDisable()
@@ -47,6 +44,23 @@ public class GameGrid : MonoBehaviour
         }
     }
 
+    void ClearGrid()
+    {
+        for (int x = 0; x < xSize; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                MatchInfo matchInfo = GetMatchInformation(_items[x, y]);
+                if (matchInfo.validMatch)
+                {
+                    Destroy(_items[x, y].gameObject);
+                    _items[x, y] = InstantiateCandy(x, y);
+                    y--;
+                }
+            }
+        }
+    }
+
     // Preenche o grid com candies
     GridItem InstantiateCandy(int x, int y)
     {
@@ -58,6 +72,8 @@ public class GameGrid : MonoBehaviour
 
     void OnMouseOverItem(GridItem item)
     {
+        if (_currentlySelectedItem == item || !canPlay)
+            return;
 
         if (_currentlySelectedItem == item)
         {
@@ -74,19 +90,109 @@ public class GameGrid : MonoBehaviour
             float yDiff = Mathf.Abs(item.y - _currentlySelectedItem.y);
             if (xDiff + yDiff == 1)
             {
-                StartCoroutine(Swap(_currentlySelectedItem, item));
+                StartCoroutine(TryMatch(_currentlySelectedItem, item));
             }
             else
             {
-                Debug.LogError("Esses itens estão mais de 1 unidade longe um do outro");
+                Debug.Log("Esses itens estão mais de 1 unidade longe um do outro");
             }
 
             _currentlySelectedItem = null;
         }
     }
 
-    IEnumerator TryMatch(GridItem a, GridItem b){
+    IEnumerator TryMatch(GridItem a, GridItem b)
+    {
+        canPlay = false;
+        yield return StartCoroutine(Swap(a, b));
+        MatchInfo matchA = GetMatchInformation(a);
+        MatchInfo matchB = GetMatchInformation(b);
+        if (!matchA.validMatch && !matchB.validMatch)
+        {
+            yield return StartCoroutine(Swap(a, b));
+            canPlay = true;
+            yield break;
+        }
+        if (matchA.validMatch)
+        {
+            yield return StartCoroutine(DestroyItems(matchA.match));
+            yield return new WaitForSeconds(delayBetweenMatches);
+            yield return StartCoroutine(UpdateGridAfterMatch(matchA));
+        }
+        else if (matchB.validMatch)
+        {
+            yield return StartCoroutine(DestroyItems(matchB.match));
+            yield return new WaitForSeconds(delayBetweenMatches);
+            yield return StartCoroutine(UpdateGridAfterMatch(matchB));
+        }
+        canPlay = true;
+    }
 
+    IEnumerator UpdateGridAfterMatch(MatchInfo match)
+    {
+
+        if (match.matchStartingY == match.matchEndingY)
+        {
+            // match horizontal
+            for (int x = match.matchStartingX; x <= match.matchEndingX; x++)
+            {
+                for (int y = match.matchStartingY; y < ySize - 1; y++)
+                {
+                    GridItem upperIndex = _items[x, y + 1];
+                    GridItem current = _items[x, y];
+                    _items[x, y] = upperIndex;
+                    _items[x, y + 1] = current;
+                    _items[x, y].OnItemPositionChanged(_items[x, y].x, _items[x, y].y - 1);
+                }
+                _items[x, ySize - 1] = InstantiateCandy(x, ySize - 1);
+            }
+        }
+        else if (match.matchEndingX == match.matchStartingX)
+        {
+            // match vertical
+            int matchHeight = 1 + (match.matchEndingY - match.matchStartingY);
+            for (int y = match.matchStartingY + matchHeight; y <= ySize - 1; y++)
+            {
+                GridItem lowerIndex = _items[match.matchStartingX, y - matchHeight];
+                GridItem current = _items[match.matchStartingX, y];
+                _items[match.matchStartingX, y - matchHeight] = current;
+                _items[match.matchStartingX, y] = lowerIndex;
+            }
+
+            for (int y = 0; y < ySize - matchHeight; y++)
+            {
+                _items[match.matchStartingX, y].OnItemPositionChanged(match.matchStartingX, y);
+            }
+
+            for (int i = 0; i < match.match.Count; i++)
+            {
+                _items[match.matchStartingX, (ySize - 1) - i] = InstantiateCandy(match.matchStartingX, (ySize - 1) - i);
+            }
+        }
+
+        for (int x = 0; x < xSize; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                MatchInfo matchInfo = GetMatchInformation(_items[x, y]);
+                if (matchInfo.validMatch)
+                {
+                    // yield return new WaitForSeconds(delayBetweenMatches);
+                    yield return StartCoroutine(DestroyItems(matchInfo.match));
+                    yield return new WaitForSeconds(delayBetweenMatches);
+                    yield return StartCoroutine(UpdateGridAfterMatch(matchInfo));
+                }
+            }
+        }
+    }
+
+    IEnumerator DestroyItems(List<GridItem> items)
+    {
+        foreach (GridItem i in items)
+        {
+            yield return StartCoroutine(i.transform.Scale(Vector3.zero, 0.05f));
+            Destroy(i.gameObject);
+        }
     }
 
     IEnumerator Swap(GridItem a, GridItem b)
@@ -101,40 +207,47 @@ public class GameGrid : MonoBehaviour
         ChangeRigidbodyStatus(true);
     }
 
-    void SwapIndices (GridItem a, GridItem b){
-        GridItem tempA = _items [a.x, a.y];
-        _items [a.x, a.y] = b;
-        _items [b.x, b.y] = tempA;
+    void SwapIndices(GridItem a, GridItem b)
+    {
+        GridItem tempA = _items[a.x, a.y];
+        _items[a.x, a.y] = b;
+        _items[b.x, b.y] = tempA;
         int bOldX = b.x; int bOldY = b.y;
         b.OnItemPositionChanged(a.x, a.y);
         a.OnItemPositionChanged(bOldX, bOldY);
     }
 
-    List<GridItem> SearchHorizontally (GridItem item){
+    List<GridItem> SearchHorizontally(GridItem item)
+    {
         List<GridItem> hItems = new List<GridItem> { item };
         int left = item.x - 1;
         int right = item.x + 1;
-        while (left >= 0 && _items [left, item.y].id == item.id){
-            hItems.Add (_items [left, item.y]);
+        while (left >= 0 && _items[left, item.y].id == item.id)
+        {
+            hItems.Add(_items[left, item.y]);
             left--;
         }
 
-        while (right < xSize && _items[right, item.y].id == item.id){
+        while (right < xSize && _items[right, item.y].id == item.id)
+        {
             hItems.Add(_items[right, item.y]);
             right++;
         }
         return hItems;
     }
 
-    List<GridItem> SearchVertically(GridItem item){
-        List<GridItem> vItems = new List<GridItem>{item};
+    List<GridItem> SearchVertically(GridItem item)
+    {
+        List<GridItem> vItems = new List<GridItem> { item };
         int lower = item.y - 1;
         int upper = item.y + 1;
-        while (lower >= 0 && _items [item.x, lower].id == item.id){
+        while (lower >= 0 && _items[item.x, lower].id == item.id)
+        {
             vItems.Add(_items[item.x, lower]);
             lower--;
         }
-        while (upper < ySize && _items[item.x, upper].id == item.id){
+        while (upper < ySize && _items[item.x, upper].id == item.id)
+        {
             vItems.Add(_items[item.x, upper]);
             upper++;
         }
@@ -142,17 +255,21 @@ public class GameGrid : MonoBehaviour
         return vItems;
     }
 
-    MatchInfo GetMatchInformation(GridItem item){
+    MatchInfo GetMatchInformation(GridItem item)
+    {
         MatchInfo m = new MatchInfo();
         m.match = null;
-        List<GridItem> hMatch = SearchHorizontally (item);
-        List<GridItem> vMatch = SearchVertically (item);
-        if (hMatch.Count >= minItemsForMatch && hMatch.Count > vMatch.Count){
+        List<GridItem> hMatch = SearchHorizontally(item);
+        List<GridItem> vMatch = SearchVertically(item);
+        if (hMatch.Count >= minItemsForMatch && hMatch.Count > vMatch.Count)
+        {
             m.matchStartingX = GetMinimumX(hMatch);
             m.matchEndingX = GetMaximumX(hMatch);
             m.matchStartingY = m.matchEndingY = hMatch[0].y;
             m.match = hMatch;
-        } else if (vMatch.Count >= minItemsForMatch){
+        }
+        else if (vMatch.Count >= minItemsForMatch)
+        {
             m.matchStartingY = GetMinimumY(vMatch);
             m.matchEndingY = GetMaximumY(vMatch);
             m.matchStartingX = m.matchEndingX = hMatch[0].x;
@@ -161,36 +278,44 @@ public class GameGrid : MonoBehaviour
         return m;
     }
 
-    int GetMinimumX (List<GridItem> items){
-        float[] indices = new float [items.Count];
-        for (int i = 0; i < indices.Length; i++){
+    int GetMinimumX(List<GridItem> items)
+    {
+        float[] indices = new float[items.Count];
+        for (int i = 0; i < indices.Length; i++)
+        {
             indices[i] = items[i].x;
         }
-        return (int) Mathf.Min(indices);
+        return (int)Mathf.Min(indices);
     }
 
-    int GetMaximumX (List<GridItem> items){
-        float[] indices = new float [items.Count];
-        for (int i = 0; i < indices.Length; i++){
+    int GetMaximumX(List<GridItem> items)
+    {
+        float[] indices = new float[items.Count];
+        for (int i = 0; i < indices.Length; i++)
+        {
             indices[i] = items[i].x;
         }
-        return (int) Mathf.Max(indices);
+        return (int)Mathf.Max(indices);
     }
 
-    int GetMinimumY (List<GridItem> items){
-        float[] indices = new float [items.Count];
-        for (int i = 0; i < indices.Length; i++){
+    int GetMinimumY(List<GridItem> items)
+    {
+        float[] indices = new float[items.Count];
+        for (int i = 0; i < indices.Length; i++)
+        {
             indices[i] = items[i].y;
         }
-        return (int) Mathf.Min(indices);
+        return (int)Mathf.Min(indices);
     }
 
-    int GetMaximumY (List<GridItem> items){
-        float[] indices = new float [items.Count];
-        for (int i = 0; i < indices.Length; i++){
+    int GetMaximumY(List<GridItem> items)
+    {
+        float[] indices = new float[items.Count];
+        for (int i = 0; i < indices.Length; i++)
+        {
             indices[i] = items[i].y;
         }
-        return (int) Mathf.Max(indices);
+        return (int)Mathf.Max(indices);
     }
 
     void GetCandies()
