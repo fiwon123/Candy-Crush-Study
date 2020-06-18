@@ -5,6 +5,9 @@ using UnityEngine;
 public class GameGrid : MonoBehaviour
 {
 
+    public AudioSource swapAudio;
+    public AudioSource clearAudio;
+
     public int xSize, ySize;
     public float candyWidth = 1f;
     public GameObject[] _candies;
@@ -14,20 +17,42 @@ public class GameGrid : MonoBehaviour
     public float delayBetweenMatches = 0.2f;
     public bool canPlay;
 
-    // Start is called before the first frame update
-    void Start()
+    public static GameGrid instance;
+
+    /// <summary>
+    /// Awake is called when the script instance is being loaded.
+    /// </summary>
+    void Awake()
     {
+        instance = this;
+    }
+
+    public void Reset(){
+        GridItem.OnMouseOverItemEventHandler -= OnMouseOverItem;
+        GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
         canPlay = true;
+        DestroyGrid();
         GetCandies();
         FillGrid();
         ClearGrid();
         GridItem.OnMouseOverItemEventHandler += OnMouseOverItem;
+        GridItem.OnMouseSelectedItemEventHandler += OnMouseSelectedItem;
     }
 
     void OnDisable()
     {
         GridItem.OnMouseOverItemEventHandler -= OnMouseOverItem;
+        GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
     }
+
+     void DestroyGrid() {
+        if (_items == null)
+            return;
+
+        foreach(GridItem gi in _items){
+            Destroy(gi.gameObject);
+        }
+     }
 
     // Começa a preencher o grid quando o jogo é iniciado
     void FillGrid()
@@ -70,19 +95,32 @@ public class GameGrid : MonoBehaviour
         return newCandy;
     }
 
-    void OnMouseOverItem(GridItem item)
+    void OnMouseSelectedItem(GridItem item)
     {
         if (_currentlySelectedItem == item || !canPlay)
             return;
 
-        if (_currentlySelectedItem == item)
+        if (item == null)
         {
+            _currentlySelectedItem = null;
             return;
         }
 
         if (_currentlySelectedItem == null)
         {
             _currentlySelectedItem = item;
+        }
+
+    }
+
+    void OnMouseOverItem(GridItem item)
+    {
+        if (_currentlySelectedItem == item || !canPlay)
+            return;
+
+        if (_currentlySelectedItem == null)
+        {
+            return;
         }
         else
         {
@@ -104,6 +142,7 @@ public class GameGrid : MonoBehaviour
     IEnumerator TryMatch(GridItem a, GridItem b)
     {
         canPlay = false;
+        swapAudio.Play();
         yield return StartCoroutine(Swap(a, b));
         MatchInfo matchA = GetMatchInformation(a);
         MatchInfo matchB = GetMatchInformation(b);
@@ -177,7 +216,6 @@ public class GameGrid : MonoBehaviour
                 MatchInfo matchInfo = GetMatchInformation(_items[x, y]);
                 if (matchInfo.validMatch)
                 {
-                    // yield return new WaitForSeconds(delayBetweenMatches);
                     yield return StartCoroutine(DestroyItems(matchInfo.match));
                     yield return new WaitForSeconds(delayBetweenMatches);
                     yield return StartCoroutine(UpdateGridAfterMatch(matchInfo));
@@ -188,10 +226,12 @@ public class GameGrid : MonoBehaviour
 
     IEnumerator DestroyItems(List<GridItem> items)
     {
+        clearAudio.Play();
         foreach (GridItem i in items)
         {
             yield return StartCoroutine(i.transform.Scale(Vector3.zero, 0.05f));
             Destroy(i.gameObject);
+            GameManager.instance.UpScore(50);
         }
     }
 

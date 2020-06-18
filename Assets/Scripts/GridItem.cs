@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class GridItem : MonoBehaviour
 {
+    public AudioSource selectAudio;
+
     public int x
     {
         get;
@@ -30,10 +32,22 @@ public class GridItem : MonoBehaviour
     {
         if (OnMouseOverItemEventHandler != null)
         {
-            OnMouseOverItemEventHandler(this);
+            selectAudio.Play();
+            OnMouseSelectedItemEventHandler(this);
         }
     }
 
+    void OnMouseUp() {
+        OnMouseSelectedItemEventHandler(null);
+    }
+
+    void OnMouseOver() {
+        OnMouseOverItemEventHandler(this);
+    }
+
     public delegate void OnMouseOverItem(GridItem item);
+    public delegate void OnMouseSelectedItem(GridItem item);
     public static event OnMouseOverItem OnMouseOverItemEventHandler;
+    public static event OnMouseSelectedItem OnMouseSelectedItemEventHandler;
+    
 }

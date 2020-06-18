@@ -1,0 +1,57 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GameManager : MonoBehaviour
+{
+    public float score;
+    public float objective = 3000;
+    public float time = 120;
+
+    public bool startedGame;
+
+    public static GameManager instance;
+
+    void Awake()
+    {
+        instance = this;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (startedGame)
+        {
+            time -= Time.deltaTime;
+
+            if (time <= 0f)
+            {
+                if (score >= objective)
+                {
+                    Debug.Log("Continue");
+                    time = 120;
+                    score = 0;
+                    objective += 500;
+                    GameGrid.instance.Reset();
+                }
+                else
+                {
+                    Debug.Log("Game Over");
+                    startedGame = false;
+                    time = 0f;
+                }
+            }
+        }
+    }
+
+    public void UpScore(int score)
+    {
+        this.score += score;
+    }
+
+    public void PlayGame()
+    {
+        startedGame = true;
+        GameGrid.instance.Reset();
+    }
+}
