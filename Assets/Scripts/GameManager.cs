@@ -4,9 +4,12 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    public int level = 1;
     public float score;
     public float objective = 3000;
+    public float defaultObjective = 3000;
     public float time = 120;
+    public float defaultTime = 120;
 
     public bool startedGame;
 
@@ -29,14 +32,17 @@ public class GameManager : MonoBehaviour
                 if (score >= objective)
                 {
                     Debug.Log("Continue");
-                    time = 120;
+                    time = defaultTime;
                     score = 0;
                     objective += 500;
+                    level++;
+                    PanelGame.instance.NextRound(level);
                     GameGrid.instance.Reset();
                 }
                 else
                 {
-                    Debug.Log("Game Over");
+                    GameGrid.instance.DestroyGrid();
+                    GameUI.instance.GameOver();
                     startedGame = false;
                     time = 0f;
                 }
@@ -51,6 +57,10 @@ public class GameManager : MonoBehaviour
 
     public void PlayGame()
     {
+        PanelGame.instance.NextRound(level);
+        time = defaultTime;
+        score = 0;
+        objective = defaultObjective;
         startedGame = true;
         GameGrid.instance.Reset();
     }

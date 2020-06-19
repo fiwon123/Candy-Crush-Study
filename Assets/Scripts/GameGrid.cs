@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class GameGrid : MonoBehaviour
 {
-
     public AudioSource swapAudio;
     public AudioSource clearAudio;
 
@@ -47,7 +46,7 @@ public class GameGrid : MonoBehaviour
         GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
     }
 
-    void DestroyGrid()
+    public void DestroyGrid()
     {
         if (_items == null)
             return;
@@ -56,6 +55,7 @@ public class GameGrid : MonoBehaviour
         {
             Destroy(gi.gameObject);
         }
+        _items = null;
     }
 
     // Começa a preencher o grid quando o jogo é iniciado
@@ -183,6 +183,8 @@ public class GameGrid : MonoBehaviour
             {
                 isValid = Shuffle();
             } while (!isValid);
+
+            PanelGame.instance.Shuffle();
         }
     }
     bool Shuffle()
