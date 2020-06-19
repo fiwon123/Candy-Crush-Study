@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,7 +27,8 @@ public class GameGrid : MonoBehaviour
         instance = this;
     }
 
-    public void Reset(){
+    public void Reset()
+    {
         GridItem.OnMouseOverItemEventHandler -= OnMouseOverItem;
         GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
         canPlay = true;
@@ -35,6 +36,7 @@ public class GameGrid : MonoBehaviour
         GetCandies();
         FillGrid();
         ClearGrid();
+        Shuffling();
         GridItem.OnMouseOverItemEventHandler += OnMouseOverItem;
         GridItem.OnMouseSelectedItemEventHandler += OnMouseSelectedItem;
     }
@@ -45,14 +47,16 @@ public class GameGrid : MonoBehaviour
         GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
     }
 
-     void DestroyGrid() {
+    void DestroyGrid()
+    {
         if (_items == null)
             return;
 
-        foreach(GridItem gi in _items){
+        foreach (GridItem gi in _items)
+        {
             Destroy(gi.gameObject);
         }
-     }
+    }
 
     // Começa a preencher o grid quando o jogo é iniciado
     void FillGrid()
@@ -164,9 +168,103 @@ public class GameGrid : MonoBehaviour
             yield return new WaitForSeconds(delayBetweenMatches);
             yield return StartCoroutine(UpdateGridAfterMatch(matchB));
         }
+
+        Shuffling();
+
         canPlay = true;
     }
+    void Shuffling()
+    {
+        while (IsDeadLock())
+        {
+            Debug.Log("Shuffle!");
+            bool isValid;
+            do
+            {
+                isValid = Shuffle();
+            } while (!isValid);
+        }
+    }
+    bool Shuffle()
+    {
+        List<GridItem> listGems = new List<GridItem>();
+        for (int x = 0; x < xSize; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                listGems.Add(_items[x, y]);
+            }
+        }
 
+        while (listGems.Count > 0)
+        {
+            int idA, idB;
+
+            idA = Random.Range(0, listGems.Count);
+            GridItem itemA = listGems[idA];
+            listGems.RemoveAt(idA);
+
+            idB = Random.Range(0, listGems.Count);
+            GridItem itemB = listGems[idB];
+            listGems.RemoveAt(idB);
+
+            SwapIndices(itemA, itemB);
+            Vector3 auxPosA = itemA.gameObject.transform.position;
+            itemA.gameObject.transform.position = itemB.gameObject.transform.position;
+            itemB.gameObject.transform.position = auxPosA;
+        }
+
+        for (int x = 0; x < xSize; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                MatchInfo matchInfo = GetMatchInformation(_items[x, y]);
+                if (matchInfo.validMatch)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool IsDeadLock()
+    {
+        // Horizontal
+        for (int x = 0; x < xSize - 1; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                SwapIndices(_items[x, y], _items[x+1, y]);
+                MatchInfo matchInfoA = GetMatchInformation(_items[x, y]);
+                MatchInfo matchInfoB = GetMatchInformation(_items[x+1, y]);
+                if (matchInfoA.validMatch || matchInfoB.validMatch)
+                {
+                    SwapIndices(_items[x, y], _items[x+1, y]);
+                    return false;
+                }
+                SwapIndices(_items[x, y], _items[x+1, y]);
+            }
+        }
+        // Vertical
+        for (int y = 0; y < ySize - 1; y++)
+        {
+            for (int x = 0; x < xSize; x++)
+            {
+                SwapIndices(_items[x, y], _items[x, y+1]);
+                MatchInfo matchInfoA = GetMatchInformation(_items[x, y]);
+                MatchInfo matchInfoB = GetMatchInformation(_items[x, y+1]);
+                if (matchInfoA.validMatch || matchInfoB.validMatch)
+                {
+                    SwapIndices(_items[x, y], _items[x, y+1]);
+                    return false;
+                }
+                SwapIndices(_items[x, y], _items[x, y+1]);
+            }
+        }
+        return true;
+    }
     IEnumerator UpdateGridAfterMatch(MatchInfo match)
     {
 
