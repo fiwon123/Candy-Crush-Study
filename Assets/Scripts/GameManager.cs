@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -29,7 +29,10 @@ public class GameManager : MonoBehaviour
 
             if (time <= 0f)
             {
-                if (score >= objective)
+                time = 0f;
+
+                // Verifica se o objetivo foi alcançado e não há animação de match ocorrendo
+                if (score >= objective && GameGrid.instance.canPlay)
                 {
                     Debug.Log("Continue");
                     time = defaultTime;
@@ -39,12 +42,11 @@ public class GameManager : MonoBehaviour
                     PanelGame.instance.NextRound(level);
                     GameGrid.instance.Reset();
                 }
-                else
+                else if (GameGrid.instance.canPlay)
                 {
                     GameGrid.instance.DestroyGrid();
                     GameUI.instance.GameOver();
                     startedGame = false;
-                    time = 0f;
                 }
             }
         }
@@ -60,6 +62,7 @@ public class GameManager : MonoBehaviour
         PanelGame.instance.NextRound(level);
         time = defaultTime;
         score = 0;
+        level = 0;
         objective = defaultObjective;
         startedGame = true;
         GameGrid.instance.Reset();

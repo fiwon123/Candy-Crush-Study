@@ -53,7 +53,8 @@ public class GameGrid : MonoBehaviour
 
         foreach (GridItem gi in _items)
         {
-            Destroy(gi.gameObject);
+            if (gi)
+                Destroy(gi.gameObject);
         }
         _items = null;
     }
@@ -238,15 +239,15 @@ public class GameGrid : MonoBehaviour
         {
             for (int y = 0; y < ySize; y++)
             {
-                SwapIndices(_items[x, y], _items[x+1, y]);
+                SwapIndices(_items[x, y], _items[x + 1, y]);
                 MatchInfo matchInfoA = GetMatchInformation(_items[x, y]);
-                MatchInfo matchInfoB = GetMatchInformation(_items[x+1, y]);
+                MatchInfo matchInfoB = GetMatchInformation(_items[x + 1, y]);
                 if (matchInfoA.validMatch || matchInfoB.validMatch)
                 {
-                    SwapIndices(_items[x, y], _items[x+1, y]);
+                    SwapIndices(_items[x, y], _items[x + 1, y]);
                     return false;
                 }
-                SwapIndices(_items[x, y], _items[x+1, y]);
+                SwapIndices(_items[x, y], _items[x + 1, y]);
             }
         }
         // Vertical
@@ -254,15 +255,15 @@ public class GameGrid : MonoBehaviour
         {
             for (int x = 0; x < xSize; x++)
             {
-                SwapIndices(_items[x, y], _items[x, y+1]);
+                SwapIndices(_items[x, y], _items[x, y + 1]);
                 MatchInfo matchInfoA = GetMatchInformation(_items[x, y]);
-                MatchInfo matchInfoB = GetMatchInformation(_items[x, y+1]);
+                MatchInfo matchInfoB = GetMatchInformation(_items[x, y + 1]);
                 if (matchInfoA.validMatch || matchInfoB.validMatch)
                 {
-                    SwapIndices(_items[x, y], _items[x, y+1]);
+                    SwapIndices(_items[x, y], _items[x, y + 1]);
                     return false;
                 }
-                SwapIndices(_items[x, y], _items[x, y+1]);
+                SwapIndices(_items[x, y], _items[x, y + 1]);
             }
         }
         return true;
@@ -316,6 +317,7 @@ public class GameGrid : MonoBehaviour
                 MatchInfo matchInfo = GetMatchInformation(_items[x, y]);
                 if (matchInfo.validMatch)
                 {
+                    yield return new WaitForSeconds(delayBetweenMatches);
                     yield return StartCoroutine(DestroyItems(matchInfo.match));
                     yield return new WaitForSeconds(delayBetweenMatches);
                     yield return StartCoroutine(UpdateGridAfterMatch(matchInfo));
