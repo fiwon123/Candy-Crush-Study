@@ -4,35 +4,42 @@ using UnityEngine;
 
 public class GameGrid : MonoBehaviour
 {
+    [Header("Audios")]
     public AudioSource swapAudio;
     public AudioSource clearAudio;
 
-    public int xSize, ySize;
-    public float candyWidth = 1f;
-    public GameObject[] _candies;
+    [Header("Grid Config")]
+    public int xSize;
+    public int ySize;
+    [Tooltip("porcentagem de espaçamento no eixo x ")]
+    public float itemWidth = 1f;
+    public static int minItemsForMatch = 3;
+    public float delayBetweenMatches = 0.35f;
+
+    [Header("Runtime")]
+    public GameObject[] _itemsObj;
+    public bool canPlay;
+
     private GridItem[,] _items;
     private GridItem _currentlySelectedItem;
-    public static int minItemsForMatch = 3;
-    public float delayBetweenMatches = 0.2f;
-    public bool canPlay;
 
     public static GameGrid instance;
 
-    /// <summary>
-    /// Awake is called when the script instance is being loaded.
-    /// </summary>
     void Awake()
     {
         instance = this;
     }
 
+    /// <summary>
+    /// Reseta todo grid com novos items.
+    /// </summary>
     public void Reset()
     {
         GridItem.OnMouseOverItemEventHandler -= OnMouseOverItem;
         GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
         canPlay = true;
         DestroyGrid();
-        GetCandies();
+        GetItems();
         FillGrid();
         ClearGrid();
         Shuffling();
@@ -46,6 +53,9 @@ public class GameGrid : MonoBehaviour
         GridItem.OnMouseSelectedItemEventHandler -= OnMouseSelectedItem;
     }
 
+    /// <summary>
+    /// Limpa o grid.
+    /// </summary>
     public void DestroyGrid()
     {
         if (_items == null)
@@ -59,7 +69,9 @@ public class GameGrid : MonoBehaviour
         _items = null;
     }
 
-    // Começa a preencher o grid quando o jogo é iniciado
+    /// <summary>
+    /// Começa o preenchimento do grid.
+    /// </summary>
     void FillGrid()
     {
 
@@ -69,11 +81,14 @@ public class GameGrid : MonoBehaviour
         {
             for (int y = 0; y < ySize; y++)
             {
-                _items[x, y] = InstantiateCandy(x, y);
+                _items[x, y] = InstantiateItem(x, y);
             }
         }
     }
 
+    /// <summary>
+    /// Deixa o grid sem nenhum match pronto.
+    /// </summary>
     void ClearGrid()
     {
         for (int x = 0; x < xSize; x++)
@@ -84,20 +99,19 @@ public class GameGrid : MonoBehaviour
                 if (matchInfo.validMatch)
                 {
                     Destroy(_items[x, y].gameObject);
-                    _items[x, y] = InstantiateCandy(x, y);
+                    _items[x, y] = InstantiateItem(x, y);
                     y--;
                 }
             }
         }
     }
 
-    // Preenche o grid com candies
-    GridItem InstantiateCandy(int x, int y)
+    GridItem InstantiateItem(int x, int y)
     {
-        GameObject randomCandy = _candies[Random.Range(0, _candies.Length)];
-        GridItem newCandy = ((GameObject)Instantiate(randomCandy, new Vector3(x * candyWidth, y), Quaternion.identity)).GetComponent<GridItem>();
-        newCandy.OnItemPositionChanged(x, y);
-        return newCandy;
+        GameObject randomItem = _itemsObj[Random.Range(0, _itemsObj.Length)];
+        GridItem newItem = ((GameObject)Instantiate(randomItem, new Vector3(x * itemWidth, y), Quaternion.identity)).GetComponent<GridItem>();
+        newItem.OnItemPositionChanged(x, y);
+        return newItem;
     }
 
     void OnMouseSelectedItem(GridItem item)
@@ -174,6 +188,7 @@ public class GameGrid : MonoBehaviour
 
         canPlay = true;
     }
+
     void Shuffling()
     {
         while (IsDeadLock())
@@ -183,11 +198,13 @@ public class GameGrid : MonoBehaviour
             do
             {
                 isValid = Shuffle();
-            } while (!isValid);
+            } while (!isValid); // Enquanto não tiver match no grid
 
             PanelGame.instance.Shuffle();
         }
     }
+
+    // Embaralha o grid.
     bool Shuffle()
     {
         List<GridItem> listGems = new List<GridItem>();
@@ -232,6 +249,7 @@ public class GameGrid : MonoBehaviour
         return true;
     }
 
+    // Verifica se o grid não possuí movimentos disponíveis para match.
     bool IsDeadLock()
     {
         // Horizontal
@@ -284,7 +302,7 @@ public class GameGrid : MonoBehaviour
                     _items[x, y + 1] = current;
                     _items[x, y].OnItemPositionChanged(_items[x, y].x, _items[x, y].y - 1);
                 }
-                _items[x, ySize - 1] = InstantiateCandy(x, ySize - 1);
+                _items[x, ySize - 1] = InstantiateItem(x, ySize - 1);
             }
         }
         else if (match.matchEndingX == match.matchStartingX)
@@ -306,10 +324,11 @@ public class GameGrid : MonoBehaviour
 
             for (int i = 0; i < match.match.Count; i++)
             {
-                _items[match.matchStartingX, (ySize - 1) - i] = InstantiateCandy(match.matchStartingX, (ySize - 1) - i);
+                _items[match.matchStartingX, (ySize - 1) - i] = InstantiateItem(match.matchStartingX, (ySize - 1) - i);
             }
         }
 
+        // Procura por mais match no grid
         for (int x = 0; x < xSize; x++)
         {
             for (int y = 0; y < ySize; y++)
@@ -332,8 +351,8 @@ public class GameGrid : MonoBehaviour
         foreach (GridItem i in items)
         {
             yield return StartCoroutine(i.transform.Scale(Vector3.zero, 0.05f));
+            GameManager.instance.UpScore(i.score);
             Destroy(i.gameObject);
-            GameManager.instance.UpScore(50);
         }
     }
 
@@ -359,6 +378,7 @@ public class GameGrid : MonoBehaviour
         a.OnItemPositionChanged(bOldX, bOldY);
     }
 
+    #region SearchGrid
     List<GridItem> SearchHorizontally(GridItem item)
     {
         List<GridItem> hItems = new List<GridItem> { item };
@@ -396,7 +416,9 @@ public class GameGrid : MonoBehaviour
 
         return vItems;
     }
+    #endregion
 
+    // Procura por informações do possível match
     MatchInfo GetMatchInformation(GridItem item)
     {
         MatchInfo m = new MatchInfo();
@@ -420,6 +442,8 @@ public class GameGrid : MonoBehaviour
         return m;
     }
 
+
+    #region MatchSizeInformation
     int GetMinimumX(List<GridItem> items)
     {
         float[] indices = new float[items.Count];
@@ -459,13 +483,14 @@ public class GameGrid : MonoBehaviour
         }
         return (int)Mathf.Max(indices);
     }
+    #endregion
 
-    void GetCandies()
+    void GetItems()
     {
-        _candies = Resources.LoadAll<GameObject>("Prefabs");
-        for (int i = 0; i < _candies.Length; i++)
+        _itemsObj = Resources.LoadAll<GameObject>("Prefabs");
+        for (int i = 0; i < _itemsObj.Length; i++)
         {
-            _candies[i].GetComponent<GridItem>().id = i;
+            _itemsObj[i].GetComponent<GridItem>().id = i;
         }
     }
 

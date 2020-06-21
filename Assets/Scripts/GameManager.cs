@@ -4,13 +4,19 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    [Header("Editor Config")]
+    public int defaultLevel = 1;
+    public float defaultObjective = 3000;
+    public float upObjectiveDefault = 500;
+    public float defaultTime = 120;
+
+    [Header("Runtime Config")]
     public int level = 1;
     public float score;
     public float objective = 3000;
-    public float defaultObjective = 3000;
     public float time = 120;
-    public float defaultTime = 120;
 
+    [HideInInspector]
     public bool startedGame;
 
     public static GameManager instance;
@@ -20,7 +26,6 @@ public class GameManager : MonoBehaviour
         instance = this;
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (startedGame)
@@ -34,27 +39,38 @@ public class GameManager : MonoBehaviour
                 // Verifica se o objetivo foi alcançado e não há animação de match ocorrendo
                 if (score >= objective && GameGrid.instance.canPlay)
                 {
-                    Debug.Log("Continue");
-                    time = defaultTime;
-                    score = 0;
-                    objective += 500;
-                    level++;
-                    PanelGame.instance.NextRound(level);
-                    GameGrid.instance.Reset();
+                    NextLevel();
                 }
                 else if (GameGrid.instance.canPlay)
                 {
-                    GameGrid.instance.DestroyGrid();
-                    GameUI.instance.GameOver();
-                    startedGame = false;
+                    GameOver();
                 }
             }
         }
     }
 
-    public void UpScore(int score)
+    public void UpScore(float score)
     {
         this.score += score;
+    }
+
+    void NextLevel()
+    {
+        Debug.Log("Continue");
+        time = defaultTime;
+        score = 0;
+        objective += upObjectiveDefault;
+        level++;
+        PanelGame.instance.NextRound(level);
+        GameGrid.instance.Reset();
+    }
+
+    void GameOver()
+    {
+        Debug.Log("Game Over");
+        GameGrid.instance.DestroyGrid();
+        GameUI.instance.GameOver();
+        startedGame = false;
     }
 
     public void PlayGame()
@@ -62,7 +78,7 @@ public class GameManager : MonoBehaviour
         PanelGame.instance.NextRound(level);
         time = defaultTime;
         score = 0;
-        level = 1;
+        level = defaultLevel;
         objective = defaultObjective;
         startedGame = true;
         GameGrid.instance.Reset();

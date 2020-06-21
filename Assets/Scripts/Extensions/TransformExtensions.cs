@@ -4,6 +4,7 @@ using UnityEngine;
 
 public static class TransformExtensions
 {
+    // Animação de Swap
     public static IEnumerator Move (this Transform t, Vector3 target, float duration){
         Vector3 diffVector = (target - t.position);
         float diffLenght = diffVector.magnitude;
@@ -18,6 +19,7 @@ public static class TransformExtensions
         t.position = target;
     }
 
+    // Animação de destruir um item
     public static IEnumerator Scale (this Transform t, Vector3 target, float duration){
         Vector3 diffVector = (target - t.localScale);
         float diffLength = diffVector.magnitude;

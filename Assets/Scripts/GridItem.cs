@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class GridItem : MonoBehaviour
 {
+    [Tooltip("Pontuação por item no match")]
+    public float score = 50;
+    [Tooltip("Som de quando seleciona o item")]
     public AudioSource selectAudio;
 
     public int x
