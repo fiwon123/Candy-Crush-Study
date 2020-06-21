@@ -62,7 +62,7 @@ public class GameManager : MonoBehaviour
         PanelGame.instance.NextRound(level);
         time = defaultTime;
         score = 0;
-        level = 0;
+        level = 1;
         objective = defaultObjective;
         startedGame = true;
         GameGrid.instance.Reset();
