@@ -44,11 +44,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultLevel: 1
-  defaultObjective: 2000
+  defaultObjective: 3000
   upObjectiveDefault: 500
   defaultTime: 120
   level: 1
   score: 0
-  objective: 2000
+  objective: 3000
   time: 120
   startedGame: 0

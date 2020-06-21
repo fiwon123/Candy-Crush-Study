@@ -34,7 +34,6 @@ public class GameManager : MonoBehaviour
 
             if (time <= 0f)
             {
-                time = 0f;
 
                 // Verifica se o objetivo foi alcançado e não há animação de match ocorrendo
                 if (score >= objective && GameGrid.instance.canPlay)
@@ -46,6 +45,8 @@ public class GameManager : MonoBehaviour
                     GameOver();
                 }
             }
+        }else {
+            time = 0f;
         }
     }
 
